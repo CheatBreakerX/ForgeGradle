@@ -120,7 +120,10 @@ public class Constants
     public static final String URL_ASSETS       = "http://resources.download.minecraft.net";
     public static final String URL_LIBRARY      = "https://libraries.minecraft.net/";
     public static final String URL_FORGE_MAVEN  = "https://maven.minecraftforge.net";
-    public static final String URL_MCP_JSON     = "http://export.mcpbot.bspk.rs/versions.json";
+    public static final List<String> URLS_MCP_JSON = Arrays.asList(
+            URL_FORGE_MAVEN + "/de/oceanlabs/mcp/versions.json",
+            "http://export.mcpbot.bspk.rs/versions.json"
+    );
 
     // configs
     public static final String CONFIG_MCP_DATA       = "forgeGradleMcpData";

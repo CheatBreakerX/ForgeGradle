@@ -29,6 +29,7 @@ import java.lang.reflect.Type;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
@@ -215,7 +216,8 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
         // MCP json
         File jsonCache = cacheFile("McpMappings.json");
         File etagFile = new File(jsonCache.getAbsolutePath() + ".etag");
-        getExtension().mcpJson = JsonFactory.GSON.fromJson(getWithEtag(URL_MCP_JSON, jsonCache, etagFile), new TypeToken<Map<String, Map<String, int[]>>>() {}.getType());
+        String mcpJson = getWithEtag(URLS_MCP_JSON, jsonCache, etagFile);
+        getExtension().mcpJson = JsonFactory.GSON.fromJson(mcpJson, new TypeToken<Map<String, Map<String, int[]>>>() {}.getType());
 
         // MC manifest json
         jsonCache = cacheFile("McManifest.json");
@@ -618,79 +620,89 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
 
     protected String getWithEtag(String strUrl, File cache, File etagFile)
     {
-        try
+        return getWithEtag(Collections.singletonList(strUrl), cache, etagFile);
+    }
+
+    protected String getWithEtag(List<String> strUrls, File cache, File etagFile)
+    {
+        for (String strUrl : strUrls)
         {
-            if (project.getGradle().getStartParameter().isOffline()) // dont even try the internet
-                return Files.toString(cache, Charsets.UTF_8);
-
-            // dude, its been less than 1 minute since the last time..
-            if (cache.exists() && cache.lastModified() + 60000 >= System.currentTimeMillis())
-                return Files.toString(cache, Charsets.UTF_8);
-
-            String etag;
-            if (etagFile.exists())
+            try
             {
-                etag = Files.toString(etagFile, Charsets.UTF_8);
-            }
-            else
-            {
-                etagFile.getParentFile().mkdirs();
-                etag = "";
-            }
+                if (project.getGradle().getStartParameter().isOffline()) // dont even try the internet
+                    return Files.toString(cache, Charsets.UTF_8);
 
-            URL url = new URL(strUrl);
+                // dude, its been less than 1 minute since the last time..
+                if (cache.exists() && cache.lastModified() + 60000 >= System.currentTimeMillis())
+                    return Files.toString(cache, Charsets.UTF_8);
 
-            HttpURLConnection con = (HttpURLConnection) url.openConnection();
-            con.setInstanceFollowRedirects(true);
-            con.setRequestProperty("User-Agent", USER_AGENT);
-            con.setIfModifiedSince(cache.lastModified());
-
-            if (!Strings.isNullOrEmpty(etag))
-            {
-                con.setRequestProperty("If-None-Match", etag);
-            }
-
-            con.connect();
-
-            String out = null;
-            if (con.getResponseCode() == 304)
-            {
-                // the existing file is good
-                Files.touch(cache); // touch it to update last-modified time, to wait another minute
-                out = Files.toString(cache, Charsets.UTF_8);
-            }
-            else if (con.getResponseCode() == 200)
-            {
-                InputStream stream = con.getInputStream();
-                byte[] data = ByteStreams.toByteArray(stream);
-                Files.write(data, cache);
-                stream.close();
-
-                // write etag
-                etag = con.getHeaderField("ETag");
-                if (Strings.isNullOrEmpty(etag))
+                String etag;
+                if (etagFile.exists())
                 {
-                    Files.touch(etagFile);
+                    etag = Files.toString(etagFile, Charsets.UTF_8);
                 }
                 else
                 {
-                    Files.write(etag, etagFile, Charsets.UTF_8);
+                    etagFile.getParentFile().mkdirs();
+                    etag = "";
                 }
 
-                out = new String(data);
+                URL url = new URL(strUrl);
+
+                HttpURLConnection con = (HttpURLConnection) url.openConnection();
+                con.setInstanceFollowRedirects(true);
+                con.setRequestProperty("User-Agent", USER_AGENT);
+                con.setIfModifiedSince(cache.lastModified());
+
+                if (!Strings.isNullOrEmpty(etag))
+                {
+                    con.setRequestProperty("If-None-Match", etag);
+                }
+
+                con.connect();
+
+                String out = null;
+                if (con.getResponseCode() == 304)
+                {
+                    // the existing file is good
+                    Files.touch(cache); // touch it to update last-modified time, to wait another minute
+                    out = Files.toString(cache, Charsets.UTF_8);
+                }
+                else if (con.getResponseCode() == 200)
+                {
+                    InputStream stream = con.getInputStream();
+                    byte[] data = ByteStreams.toByteArray(stream);
+                    Files.write(data, cache);
+                    stream.close();
+
+                    // write etag
+                    etag = con.getHeaderField("ETag");
+                    if (Strings.isNullOrEmpty(etag))
+                    {
+                        Files.touch(etagFile);
+                    }
+                    else
+                    {
+                        Files.write(etag, etagFile, Charsets.UTF_8);
+                    }
+
+                    out = new String(data);
+                }
+                else
+                {
+                    project.getLogger().error("Etag download for " + strUrl + " failed with code " + con.getResponseCode());
+                }
+
+                con.disconnect();
+
+                if (out != null) {
+                    return out;
+                }
             }
-            else
+            catch (Exception e)
             {
-                project.getLogger().error("Etag download for " + strUrl + " failed with code " + con.getResponseCode());
+                e.printStackTrace();
             }
-
-            con.disconnect();
-
-            return out;
-        }
-        catch (Exception e)
-        {
-            e.printStackTrace();
         }
 
         if (cache.exists())
@@ -705,7 +717,7 @@ public abstract class BasePlugin<K extends BaseExtension> implements Plugin<Proj
             }
         }
 
-        throw new RuntimeException("Unable to obtain url (" + strUrl + ") with etag!");
+        throw new RuntimeException("Unable to obtain url (" + strUrls + ") with etag!");
     }
 
     /**
