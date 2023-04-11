@@ -1,0 +1,30 @@
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<modelVersion>4.0.0</modelVersion>
+<groupId>com.github.ReplayMod</groupId>
+<artifactId>ForgeGradle</artifactId>
+<version>5d1e8d823</version>
+<packaging>pom</packaging>
+<name>ReplayMod/ForgeGradle</name>
+<description>Minecraft mod development framework used by Forge and FML for the gradle build system</description>
+<url>https://github.com/ReplayMod/ForgeGradle</url>
+<inceptionYear>2018</inceptionYear>
+<licenses>
+<license>
+<name>GNU Lesser General Public License v2.1</name>
+<url>https://api.github.com/licenses/lgpl-2.1</url>
+<distribution>repo</distribution>
+</license>
+</licenses>
+<developers>
+<developer>
+<id>ReplayMod</id>
+<name>Minecraft Replay Mod</name>
+<email/>
+</developer>
+</developers>
+<scm>
+<connection>scm:git://github.com/ReplayMod/ForgeGradle.git</connection>
+<developerConnection>scm:git://github.com/ReplayMod/ForgeGradle.git</developerConnection>
+<url>git://github.com/ReplayMod/ForgeGradle.git</url>
+</scm>
+</project>
